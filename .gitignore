@@ -1,0 +1,25 @@
+# Code::Blocks build output
+/bin/
+/obj/
+
+# Compiled binaries and object files
+*.exe
+*.dll
+*.o
+*.a
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+
+# Local reports and real event logs
+ip_alerts_report.txt
+security_report.txt
+login_logs.txt
+
+# IDE and operating system metadata
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
