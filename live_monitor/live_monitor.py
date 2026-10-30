@@ -10,6 +10,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import tkinter as tk
 from contextlib import closing
 import xml.etree.ElementTree as ET
@@ -74,15 +75,21 @@ class EventStore:
             db.execute("DELETE FROM events WHERE created_at < ?",(cutoff,))
 
     def connect(self):
-        db=sqlite3.connect(self.path,timeout=10);db.row_factory=sqlite3.Row;return db
+        db=sqlite3.connect(self.path,timeout=10,isolation_level=None);db.row_factory=sqlite3.Row;return db
 
     def add(self,events:list[dict])->int:
         inserted=0
         with closing(self.connect()) as db:
-            for event in events:
-                if not event.get("record_id") or not event.get("created_at"):continue
-                cursor=db.execute("INSERT OR IGNORE INTO events VALUES(?,?,?,?,?,?,?,?,?)",tuple(event.get(k,"") for k in ("record_id","created_at","username","domain","ip","workstation","logon_type","status","sub_status")))
-                inserted+=cursor.rowcount
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                for event in events:
+                    if not event.get("record_id") or not event.get("created_at"):continue
+                    cursor=db.execute("INSERT OR IGNORE INTO events VALUES(?,?,?,?,?,?,?,?,?)",tuple(event.get(k,"") for k in ("record_id","created_at","username","domain","ip","workstation","logon_type","status","sub_status")))
+                    inserted+=cursor.rowcount
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
         return inserted
 
     def recent(self,limit:int=250):
@@ -104,7 +111,15 @@ def run_self_test():
     parsed=parse_event_xml(sample)
     assert len(parsed)==1 and parsed[0]["record_id"]=="7001" and parsed[0]["ip"]=="203.0.113.10"
     assert parse_event_xml(sample.replace("<EventID>4625</EventID>","<EventID>4624</EventID>"))==[]
-    print("Self-check passed: failed-logon XML parsed; successful-logon IDs ignored.")
+    now=datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with tempfile.TemporaryDirectory() as folder:
+        store=EventStore(Path(folder)/"smoke.sqlite3")
+        sample_events=[{**parsed[0],"record_id":str(7001+i),"created_at":now} for i in range(ALERT_THRESHOLD)]
+        assert store.add(sample_events)==ALERT_THRESHOLD
+        assert store.add(sample_events)==0
+        assert len(store.recent())==ALERT_THRESHOLD
+        assert any(alert[0]=="source" and alert[1]=="203.0.113.10" for alert in store.alerts())
+    print("Self-check passed: failed-logon XML parsing, SQLite persistence/deduplication, and threshold alerts.")
 
 
 class MonitorApp:
@@ -180,3 +195,4 @@ def main():
 
 
 if __name__=="__main__":raise SystemExit(main())
+
