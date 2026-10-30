@@ -53,7 +53,7 @@
     .btn-primary { color: #07140f; font-weight: 750; border-color: var(--green); background: var(--green); }
     .btn-primary:hover { background: #61e4b9; }
     .btn-quiet { color: #b6c4d3; }
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 13px; margin-bottom: 15px; }
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 13px; margin-bottom: 15px; }
     .stat { padding: 17px 18px; min-height: 115px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); position: relative; overflow: hidden; }
     .stat::after { content: ""; width: 86px; height: 86px; border-radius: 50%; background: var(--glow, rgba(57,214,163,.08)); position: absolute; right: -34px; top: -37px; }
     .stat-label { color: var(--muted); font-size: 11px; }
@@ -72,6 +72,7 @@
     .bar-track { height: 142px; width: min(100%, 38px); display: flex; align-items: end; border-radius: 7px; background: rgba(255,255,255,.025); overflow: hidden; }
     .bar { width: 100%; min-height: 4px; border-radius: 7px 7px 0 0; background: linear-gradient(180deg, #55e0b3, #239d7b); transition: height .35s; }
     .bar.has-fail { background: linear-gradient(180deg, #ff8798, #e35369); }
+    .bar.has-blocked { background: linear-gradient(180deg, #9cc4ff, #4e82d2); }
     .chart-label { color: #718196; font-size: 9px; white-space: nowrap; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 10px; }
     .legend span { display: flex; gap: 6px; align-items: center; }
@@ -100,6 +101,7 @@
     .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 20px; padding: 4px 8px; font-size: 9px; font-weight: 650; }
     .pill.fail { color: var(--red); background: var(--red-soft); }
     .pill.success { color: var(--green); background: var(--green-soft); }
+    .pill.blocked { color: var(--blue); background: rgba(124,174,255,.12); }
     .risk { color: var(--red); }
     .risk.medium { color: var(--amber); }
     .source-list { padding: 0 14px 12px; }
@@ -110,13 +112,28 @@
     .source-status { justify-self: end; font-size: 9px; color: var(--green); }
     .source-status.review { color: var(--amber); }
     .source-status.elevated { color: var(--red); }
+    .source-row { grid-template-columns: minmax(0,1.3fr) .55fr .65fr .75fr auto; }
+    .action-btn { border: 1px solid var(--line); background: var(--panel-2); padding: 6px 8px; border-radius: 8px; font-size: 9px; color: var(--text); white-space: nowrap; }
+    .action-btn:hover { border-color: var(--amber); }
+    .demo-note { padding: 0 16px 12px; color: var(--amber); font-size: 10px; line-height: 1.5; }
+    .device-list, .action-list { padding: 0 14px 12px; }
+    .action-list { max-height: 330px; overflow: auto; }
+    .device-row, .action-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 10px 4px; border-top: 1px solid rgba(38,51,68,.72); }
+    .device-name, .action-name { font-size: 10px; font-weight: 650; }
+    .device-meta, .action-meta { color: var(--muted); font-size: 9px; margin-top: 4px; }
+    .device-detail { margin: 0 14px 14px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; color: var(--muted); font-size: 10px; }
+    .signal-flow { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; padding: 0 14px 14px; }
+    .flow-step { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: rgba(255,255,255,.02); }
+    .flow-step strong { display: block; font-size: 10px; color: var(--muted); }
+    .flow-step span { display: block; font-size: 20px; margin-top: 8px; font-weight: 700; }
     .table-empty { color: var(--muted); padding: 25px 15px; text-align: center; font-size: 11px; }
     .foot { color: #708095; font-size: 10px; display: flex; justify-content: space-between; gap: 12px; margin-top: 17px; }
     .foot strong { color: #9fb0c1; font-weight: 550; }
     .toast { position: fixed; bottom: 22px; right: 22px; padding: 12px 15px; border: 1px solid #315446; border-radius: 10px; color: #dff9ef; background: #14241f; box-shadow: 0 12px 35px rgba(0,0,0,.35); font-size: 12px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; z-index: 5; }
     .toast.show { opacity: 1; transform: translateY(0); }
     @media (max-width: 1050px) { .app { grid-template-columns: 190px minmax(0,1fr); } .stats { grid-template-columns: repeat(2,minmax(0,1fr)); } .grid-top { grid-template-columns: 1fr; } }
-    @media (max-width: 720px) { .app { display: block; } .sidebar { display: none; } main { padding: 20px 14px 30px; } .topbar { align-items: flex-start; flex-direction: column; margin-bottom: 20px; } .top-actions { justify-content: flex-start; } .stats { gap: 9px; } .stat { min-height: 104px; padding: 14px; } .stat-value { font-size: 24px; } .grid-bottom { grid-template-columns: 1fr; } .panel-head { align-items: flex-start; flex-direction: column; } .table-tools { width: 100%; } .search { flex: 1; width: auto; } .foot { flex-direction: column; } }
+    @media (max-width: 980px) { .stats { grid-template-columns: repeat(3,minmax(0,1fr)); } .grid-top { grid-template-columns: 1fr; } }
+    @media (max-width: 720px) { .app { display: block; } .sidebar { display: none; } main { padding: 20px 14px 30px; } .topbar { align-items: flex-start; flex-direction: column; margin-bottom: 20px; } .top-actions { justify-content: flex-start; } .stats { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; } .stat { min-height: 104px; padding: 14px; } .stat-value { font-size: 24px; } .grid-bottom { grid-template-columns: 1fr; } .signal-flow { grid-template-columns: repeat(2,minmax(0,1fr)); } .panel-head { align-items: flex-start; flex-direction: column; } .table-tools { width: 100%; } .search { flex: 1; width: auto; } .foot { flex-direction: column; } }
   </style>
 </head>
 <body>
@@ -133,10 +150,13 @@
           <a href="#activity"><span class="nav-icon">⌁</span>Login activity</a>
           <a href="#sources"><span class="nav-icon">◎</span>IP intelligence</a>
           <a href="#alerts"><span class="nav-icon">△</span>Review alerts</a>
+          <a href="#flow"><span class="nav-icon">↝</span>Signal flow</a>
+          <a href="#devices"><span class="nav-icon">◉</span>Device scan</a>
+          <a href="#actions"><span class="nav-icon">⊘</span>Demo actions</a>
         </nav>
       </div>
       <div class="side-bottom">
-        <div class="safe-note"><strong>Review before action</strong>Shared IPs can belong to different people and devices. This dashboard recommends investigation and never blocks users or addresses.</div>
+        <div class="safe-note"><strong>Demo actions only</strong>Block controls simulate the next replay. They never change real accounts, firewalls, or networks.</div>
       </div>
     </aside>
 
@@ -145,6 +165,7 @@
         <div><div class="eyebrow">LoginShield NG / Overview</div><h1>Threat monitoring</h1></div>
         <div class="top-actions">
           <div class="monitor-state"><span class="dot"></span><span id="feed-label">Demo feed active</span></div>
+          <button class="btn btn-primary" id="replay-btn" type="button">Run demo replay</button>
           <button class="btn btn-quiet" id="demo-btn" type="button">Reset demo</button>
           <button class="btn" id="import-btn" type="button">↑ Import CSV</button>
           <button class="btn btn-primary" id="export-btn" type="button">Export report</button>
@@ -157,6 +178,17 @@
         <article class="stat danger"><div class="stat-label">Failed attempts</div><div class="stat-value" id="metric-failed">0</div><div class="stat-foot" id="failed-foot">Across all observed IPs</div></article>
         <article class="stat"><div class="stat-label">Accounts targeted</div><div class="stat-value" id="metric-accounts">0</div><div class="stat-foot">Distinct accounts with failures</div></article>
         <article class="stat"><div class="stat-label">IPs for review</div><div class="stat-value" id="metric-ips">0</div><div class="stat-foot">Correlated signals, not identities</div></article>
+        <article class="stat"><div class="stat-label">Blocked in demo</div><div class="stat-value" id="metric-blocked">0</div><div class="stat-foot">Simulated outcomes only</div></article>
+      </section>
+
+      <section class="panel" id="flow" style="margin-bottom:15px">
+        <div class="panel-head"><div><div class="panel-title">Signal flow</div><div class="panel-caption">Events are parsed, correlated, reviewed, and optionally simulated as blocked during replay</div></div></div>
+        <div class="signal-flow">
+          <div class="flow-step"><strong>EVENTS</strong><span id="flow-events">0</span></div>
+          <div class="flow-step"><strong>IP CORRELATIONS</strong><span id="flow-ips">0</span></div>
+          <div class="flow-step"><strong>REVIEW ALERTS</strong><span id="flow-alerts">0</span></div>
+          <div class="flow-step"><strong>DEMO BLOCKS</strong><span id="flow-blocked">0</span></div>
+        </div>
       </section>
 
       <section class="grid-top">
@@ -183,32 +215,64 @@
             <div><div class="panel-title">Recent login events</div><div class="panel-caption" id="event-caption">Showing all events</div></div>
             <div class="table-tools">
               <input class="search" id="search" type="search" placeholder="Search user or IP" aria-label="Search user or IP">
-              <select class="filter" id="status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option value="failed">Failed</option><option value="success">Success</option></select>
+              <select class="filter" id="status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option value="failed">Failed</option><option value="success">Success</option><option value="blocked">Blocked (demo)</option></select>
             </div>
           </div>
           <div class="table-scroll"><table><thead><tr><th>Time</th><th>Account</th><th>IP address</th><th>Device</th><th>Status</th></tr></thead><tbody id="event-rows"></tbody></table></div>
         </article>
       </section>
-      <footer class="foot"><span><strong>Data:</strong> synthetic demo events or a CSV you choose</span><span>For review only · No automatic blocking</span></footer>
+      <section class="grid-bottom" style="margin-top:15px">
+        <article class="panel" id="devices">
+          <div class="panel-head"><div><div class="panel-title">Device scan</div><div class="panel-caption">Inspect device IDs and event evidence from this feed</div></div></div>
+          <div class="device-list" id="device-list"></div>
+          <div class="device-detail" id="device-detail">Choose Scan on an observed device to inspect its event trail. This does not probe the device.</div>
+        </article>
+        <article class="panel" id="actions">
+          <div class="panel-head"><div><div class="panel-title">Demo response actions</div><div class="panel-caption">Block or unblock synthetic accounts and source IPs for the next replay</div></div></div>
+          <div class="demo-note">Simulation only. The controls below do not block real people or change any system.</div>
+          <div class="grid-bottom" style="grid-template-columns:1fr 1fr;gap:8px">
+            <div><div class="panel-caption" style="padding:0 18px 5px">Accounts</div><div class="action-list" id="account-actions"></div></div>
+            <div><div class="panel-caption" style="padding:0 18px 5px">Source IPs</div><div class="action-list" id="ip-actions"></div></div>
+          </div>
+        </article>
+      </section>
+      <footer class="foot"><span><strong>Data:</strong> synthetic demo events or a CSV you choose</span><span>Live account controls require a provider connector · Demo blocks are simulated only</span></footer>
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const demoEvents = [
-      { time: "10:00:00", username: "user_01", ip: "192.0.2.10", device: "device_A", status: "failed" },
-      { time: "10:00:10", username: "user_02", ip: "192.0.2.10", device: "device_B", status: "failed" },
-      { time: "10:00:20", username: "user_03", ip: "192.0.2.10", device: "device_B", status: "failed" },
-      { time: "10:00:25", username: "user_01", ip: "192.0.2.20", device: "device_C", status: "failed" },
-      { time: "10:00:30", username: "user_01", ip: "192.0.2.10", device: "device_A", status: "failed" },
-      { time: "10:00:40", username: "user_03", ip: "192.0.2.10", device: "device_B", status: "success" },
-      { time: "10:00:50", username: "user_01", ip: "192.0.2.20", device: "device_C", status: "failed" },
-      { time: "10:00:58", username: "user_02", ip: "192.0.2.20", device: "device_C", status: "failed" },
-      { time: "10:06:00", username: "user_03", ip: "192.0.2.20", device: "device_C", status: "failed" }
-    ];
+    const demoEvents = [];
+    const addDemo = (second, username, ip, device, status) => demoEvents.push({
+      time: `14:32:${String(second).padStart(2, "0")}`, username, ip, device, status
+    });
+    const regularUsers = ["user_01","user_02","user_03","user_04","user_05","user_06","user_08","user_09","user_10","user_11","user_12","user_13","user_14","user_15","user_16","user_17","user_18","user_19","user_20","user_01"];
+    regularUsers.forEach((username, index) => {
+      if (index < 4 || index === 19) addDemo(index * 3, username, "198.51.100.80", "office_shared", "success");
+      else addDemo(index * 3, username, `192.0.2.${100 + index}`, `device_${username}`, "success");
+    });
+    [["user_02","203.0.113.9","phone_02",11],["user_09","198.51.100.9","tablet_09",28],["user_12","203.0.113.12","tablet_12",40],["user_19","192.0.2.119","laptop_19",55]].forEach(([u,ip,d,s])=>addDemo(s,u,ip,d,"success"));
+    for (let index = 0; index < 17; index++) addDemo(1 + index * 3, `user_${21 + index}`, "192.0.2.44", "scanner_alpha", "failed");
+    for (let index = 0; index < 8; index++) addDemo(30 + index * 4, `user_${41 + index}`, "203.0.113.88", "scanner_beta", "failed");
+    [11,18,25,33,42,49,56,59].forEach((second,index)=>addDemo(second,"user_52","203.0.113.66",index%3===0?"unknown_device_52":"device_52",index===4?"success":"failed"));
+    const user07ips=["198.51.100.25","203.0.113.18","198.51.100.55","203.0.113.33","198.51.100.25","203.0.113.18","198.51.100.55"];
+    [5,14,23,32,41,50,59].forEach((second,index)=>addDemo(second,"user_07",user07ips[index],"device_user_07",[2,4,6].includes(index)?"success":"failed"));
+    addDemo(17,"user_03","198.51.100.80","office_shared","failed");
+    addDemo(35,"user_04","198.51.100.80","office_shared","failed");
+    addDemo(20,"user_05","203.0.113.140","device_user_05","failed");
+    addDemo(46,"user_16","192.0.2.201","device_user_16","failed");
+    addDemo(54,"user_18","198.51.100.24","device_user_18","failed");
+    addDemo(56,"user_27","192.0.2.44","scanner_alpha","success");
+    addDemo(51,"user_52","198.51.100.152","desktop_52","success");
+    demoEvents.sort((a,b)=>seconds(a.time)-seconds(b.time));
     const $ = (id) => document.getElementById(id);
     let events = [...demoEvents];
+    let replaySource = [...demoEvents];
     let currentAlerts = [];
+    let demoBlockedAccounts = new Set();
+    let demoBlockedIps = new Set();
+    let selectedDevice = "";
+    let playbackTimer;
     let toastTimer;
 
     function seconds(time) {
@@ -222,6 +286,10 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
     }
+    document.querySelectorAll(".nav a").forEach((link) => link.addEventListener("click", () => {
+      document.querySelectorAll(".nav a").forEach((item) => item.classList.remove("active"));
+      link.classList.add("active");
+    }));
     function analyze(list) {
       const failures = new Map();
       const targets = new Map();
@@ -233,7 +301,7 @@
       for (const event of list) {
         if (!accountIps.has(event.username)) accountIps.set(event.username, new Set());
         accountIps.get(event.username).add(event.ip);
-        if (event.status !== "failed") continue;
+        if (event.status !== "failed" && event.status !== "blocked") continue;
 
         const now = seconds(event.time);
         if (!failures.has(event.ip)) failures.set(event.ip, []);
@@ -269,11 +337,12 @@
       const chart = $("chart");
       chart.replaceChildren();
       const slots = 8;
-      const buckets = Array.from({ length: slots }, () => ({ total: 0, failed: 0 }));
+      const buckets = Array.from({ length: slots }, () => ({ total: 0, failed: 0, blocked: 0 }));
       events.forEach((event, index) => {
         const slot = Math.min(slots - 1, Math.floor(index * slots / Math.max(1, events.length)));
         buckets[slot].total++;
         if (event.status === "failed") buckets[slot].failed++;
+        if (event.status === "blocked") buckets[slot].blocked++;
       });
       const peak = Math.max(1, ...buckets.map((item) => item.total));
       buckets.forEach((bucket, index) => {
@@ -282,9 +351,9 @@
         const track = document.createElement("div");
         track.className = "bar-track";
         const bar = document.createElement("div");
-        bar.className = `bar${bucket.failed ? " has-fail" : ""}`;
+        bar.className = `bar${bucket.blocked ? " has-blocked" : (bucket.failed ? " has-fail" : "")}`;
         bar.style.height = `${Math.max(4, (bucket.total / peak) * 100)}%`;
-        bar.title = `${bucket.total} event(s), ${bucket.failed} failed`;
+        bar.title = `${bucket.total} event(s), ${bucket.failed} failed, ${bucket.blocked} blocked in demo`;
         track.append(bar);
         const label = document.createElement("span");
         label.className = "chart-label";
@@ -360,7 +429,16 @@
         const status = document.createElement("div");
         status.className = `source-status ${row.level.toLowerCase()}`;
         status.textContent = row.level;
-        line.append(ip, fails, accounts, status);
+        const action = document.createElement("button");
+        action.className = "action-btn";
+        const blocked = demoBlockedIps.has(row.ip);
+        action.textContent = blocked ? "Unblock demo" : "Block demo";
+        action.addEventListener("click", () => {
+          blocked ? demoBlockedIps.delete(row.ip) : demoBlockedIps.add(row.ip);
+          renderActions(); renderSources(analysis);
+          showToast(`${row.ip} ${blocked ? "removed from" : "added to"} the demo block list.`);
+        });
+        line.append(ip, fails, accounts, status, action);
         host.append(line);
       });
     }
@@ -396,29 +474,115 @@
         });
         const badgeCell = document.createElement("td");
         const badge = document.createElement("span");
-        badge.className = `pill ${event.status}`;
-        badge.textContent = event.status === "failed" ? "● Failed" : "● Success";
+        badge.className = `pill ${event.status === "blocked" ? "blocked" : event.status}`;
+        badge.textContent = event.status === "failed" ? "● Failed" : (event.status === "blocked" ? "● Blocked (demo)" : "● Success");
         badgeCell.append(badge);
         row.append(badgeCell);
         tbody.append(row);
       });
+    }
+    function renderDevices() {
+      const groups = new Map();
+      events.forEach((event) => {
+        if (!groups.has(event.device)) groups.set(event.device, []);
+        groups.get(event.device).push(event);
+      });
+      const rows = [...groups.entries()].map(([device, items]) => ({
+        device, items,
+        failures: items.filter((item) => item.status === "failed" || item.status === "blocked").length,
+        accounts: new Set(items.map((item) => item.username)).size,
+        ips: new Set(items.map((item) => item.ip)).size
+      })).sort((a,b)=>b.failures-a.failures||a.device.localeCompare(b.device));
+      const host = $("device-list");
+      host.replaceChildren();
+      if (!rows.length) {
+        const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No device IDs in this feed."; host.append(empty);
+      }
+      rows.forEach((row) => {
+        const line = document.createElement("div"); line.className = "device-row";
+        const copy = document.createElement("div");
+        const title = document.createElement("div"); title.className = "device-name"; title.textContent = row.device;
+        const meta = document.createElement("div"); meta.className = "device-meta"; meta.textContent = `${row.failures} failed or blocked · ${row.accounts} account(s) · ${row.ips} IP(s)`;
+        copy.append(title, meta);
+        const scan = document.createElement("button"); scan.className = "action-btn"; scan.textContent = "Scan events";
+        scan.addEventListener("click", () => {
+          selectedDevice = row.device;
+          const detail = $("device-detail"); detail.replaceChildren();
+          const heading = document.createElement("strong"); heading.textContent = `Event trail · ${row.device}`; detail.append(heading);
+          row.items.slice(-8).reverse().forEach((item) => {
+            const entry = document.createElement("div"); entry.style.marginTop = "6px";
+            entry.textContent = `${item.time} · ${item.username} · ${item.ip} · ${item.status}`; detail.append(entry);
+          });
+          showToast(`Showing event evidence for ${row.device}.`);
+        });
+        line.append(copy, scan); host.append(line);
+      });
+    }
+    function renderActions() {
+      const all = [...replaySource, ...events];
+      const accounts = [...new Set(all.map((event) => event.username))].sort();
+      const ips = [...new Set(all.map((event) => event.ip))].sort();
+      const fillActions = (id, values, blockedSet, noun) => {
+        const host = $(id); host.replaceChildren();
+        values.forEach((value) => {
+          const line = document.createElement("div"); line.className = "action-row";
+          const name = document.createElement("div"); name.className = "action-name mono"; name.textContent = value;
+          const action = document.createElement("button"); action.className = "action-btn";
+          const blocked = blockedSet.has(value); action.textContent = blocked ? "Unblock" : "Block";
+          action.addEventListener("click", () => {
+            blocked ? blockedSet.delete(value) : blockedSet.add(value);
+            renderActions();
+            showToast(`${noun} ${value} ${blocked ? "removed from" : "added to"} demo block list.`);
+          });
+          line.append(name, action); host.append(line);
+        });
+      };
+      fillActions("account-actions", accounts, demoBlockedAccounts, "Account");
+      fillActions("ip-actions", ips, demoBlockedIps, "IP");
+    }
+    function runDemoReplay() {
+      clearInterval(playbackTimer);
+      events = [];
+      let index = 0;
+      $("feed-label").textContent = `Demo replay · 0/${replaySource.length}`;
+      render();
+      playbackTimer = setInterval(() => {
+        if (index >= replaySource.length) {
+          clearInterval(playbackTimer);
+          $("feed-label").textContent = `Demo replay complete · ${events.length} events`;
+          return;
+        }
+        const incoming = { ...replaySource[index++] };
+        if (demoBlockedAccounts.has(incoming.username) || demoBlockedIps.has(incoming.ip)) incoming.status = "blocked";
+        events.push(incoming);
+        $("feed-label").textContent = `Demo replay · ${events.length}/${replaySource.length}`;
+        render();
+      }, 180);
     }
     function render() {
       events.sort((a, b) => seconds(a.time) - seconds(b.time));
       const analysis = analyze(events);
       currentAlerts = analysis.alerts;
       const failed = events.filter((event) => event.status === "failed");
-      const targeted = new Set(failed.map((event) => event.username));
+      const blocked = events.filter((event) => event.status === "blocked");
+      const targeted = new Set(events.filter((event) => event.status === "failed" || event.status === "blocked").map((event) => event.username));
       const flaggedIps = new Set(currentAlerts.map((alert) => alert.title.split(" · ")[0]).filter((label) => analysis.failures.has(label)));
       $("metric-total").textContent = events.length.toLocaleString();
       $("metric-failed").textContent = failed.length.toLocaleString();
       $("metric-accounts").textContent = targeted.size.toLocaleString();
       $("metric-ips").textContent = flaggedIps.size.toLocaleString();
+      $("metric-blocked").textContent = blocked.length.toLocaleString();
+      $("flow-events").textContent = events.length.toLocaleString();
+      $("flow-ips").textContent = flaggedIps.size.toLocaleString();
+      $("flow-alerts").textContent = currentAlerts.length.toLocaleString();
+      $("flow-blocked").textContent = blocked.length.toLocaleString();
       $("failed-foot").textContent = `${events.length ? Math.round(failed.length / events.length * 100) : 0}% of observed events`;
       renderChart();
       renderAlerts();
       renderSources(analysis);
       renderEvents();
+      renderDevices();
+      renderActions();
     }
     function parseCsv(text) {
       const rows = [];
@@ -459,7 +623,12 @@
       const file = event.target.files[0];
       if (!file) return;
       try {
-        events = parseCsv(await file.text());
+        replaySource = parseCsv(await file.text()).sort((a,b)=>seconds(a.time)-seconds(b.time));
+        events = [...replaySource];
+        clearInterval(playbackTimer);
+        demoBlockedAccounts.clear();
+        demoBlockedIps.clear();
+        selectedDevice = "";
         $("feed-label").textContent = `CSV feed · ${file.name}`;
         render();
         showToast(`Loaded ${events.length} login events.`);
@@ -468,11 +637,17 @@
       }
       event.target.value = "";
     });
+    $("replay-btn").addEventListener("click", runDemoReplay);
     $("demo-btn").addEventListener("click", () => {
+      clearInterval(playbackTimer);
       events = [...demoEvents];
+      replaySource = [...demoEvents];
+      demoBlockedAccounts.clear();
+      demoBlockedIps.clear();
+      selectedDevice = "";
       $("feed-label").textContent = "Demo feed active";
       render();
-      showToast("Demo events restored.");
+      showToast("Demo events and simulated block rules reset.");
     });
     $("search").addEventListener("input", renderEvents);
     $("status-filter").addEventListener("change", renderEvents);
@@ -482,6 +657,7 @@
         "=".repeat(35),
         `Total events: ${events.length}`,
         `Failed logins: ${events.filter((event) => event.status === "failed").length}`,
+        `Blocked in demo: ${events.filter((event) => event.status === "blocked").length}`,
         `Review alerts: ${currentAlerts.length}`,
         "",
         "REVIEW ALERTS",
@@ -493,7 +669,7 @@
         "time | username | ip | device | status",
         ...events.map((item) => `${item.time} | ${item.username} | ${item.ip} | ${item.device} | ${item.status}`),
         "",
-        "Review alerts before acting. Shared IPs are not automatically blocked."
+        "Demo blocks are simulations only; no real account, firewall, or network was changed."
       ];
       const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);

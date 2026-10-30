@@ -76,8 +76,17 @@ struct Analysis {
     std::vector<DeviceSummary> deviceRows;
     int failed = 0;
     int success = 0;
+    int blocked = 0;
     int targetedAccounts = 0;
     int reviewIps = 0;
+};
+
+struct ActionHit {
+    int left;
+    int top;
+    int right;
+    int bottom;
+    std::string key;
 };
 
 struct WindowAttempt {
@@ -89,12 +98,23 @@ struct WindowAttempt {
 std::vector<LoginEvent> g_events;
 std::vector<LoginEvent> g_scenarioEvents;
 Analysis g_analysis;
+int g_activePage = 0;
+std::set<std::string> g_demoBlockedAccounts;
+std::set<std::string> g_demoBlockedIps;
+std::vector<ActionHit> g_actionHits;
+std::string g_selectedDevice;
+int g_workspaceScroll = 0;
 bool g_failedOnly = false;
 std::string g_feedName = "DEMO FEED";
 HWND g_window = nullptr;
 double g_animationTick = 0.0;
 size_t g_playbackIndex = 0;
 bool g_playback = false;
+
+bool isDemoBlocked(const LoginEvent& event) {
+    return g_demoBlockedAccounts.find("ACCOUNT:" + event.username) != g_demoBlockedAccounts.end() ||
+           g_demoBlockedIps.find("IP:" + event.ip) != g_demoBlockedIps.end();
+}
 
 std::wstring widen(const std::string& value) {
     if (value.empty()) return L"";
@@ -379,21 +399,53 @@ bool loadCsv(const std::wstring& path, std::vector<LoginEvent>& result, std::wst
 }
 
 std::vector<LoginEvent> demoEvents() {
-    const std::array<std::array<const char*, 5>, 9> rows{{
-        {{"10:00:00", "user_01", "192.0.2.10", "device_A", "failed"}},
-        {{"10:00:10", "user_02", "192.0.2.10", "device_B", "failed"}},
-        {{"10:00:20", "user_03", "192.0.2.10", "device_B", "failed"}},
-        {{"10:00:25", "user_01", "192.0.2.20", "device_C", "failed"}},
-        {{"10:00:30", "user_01", "192.0.2.10", "device_A", "failed"}},
-        {{"10:00:40", "user_03", "192.0.2.10", "device_B", "success"}},
-        {{"10:00:50", "user_01", "192.0.2.20", "device_C", "failed"}},
-        {{"10:00:58", "user_02", "192.0.2.20", "device_C", "failed"}},
-        {{"10:00:59", "user_03", "192.0.2.20", "device_C", "failed"}}
-    }};
     std::vector<LoginEvent> events;
-    for (const auto& row : rows) {
-        events.push_back({row[0], row[1], row[2], row[3], row[4], timeSeconds(row[0])});
+    auto add = [&](int second, const std::string& username, const std::string& ip,
+                   const std::string& device, const std::string& status) {
+        const std::string time = std::string("14:32:") + (second < 10 ? "0" : "") + std::to_string(second);
+        events.push_back({time, username, ip, device, status, timeSeconds(time)});
+    };
+    const std::array<const char*, 20> regularUsers{{
+        "user_01", "user_02", "user_03", "user_04", "user_05", "user_06", "user_08",
+        "user_09", "user_10", "user_11", "user_12", "user_13", "user_14", "user_15",
+        "user_16", "user_17", "user_18", "user_19", "user_20", "user_01"
+    }};
+    for (int i = 0; i < static_cast<int>(regularUsers.size()); ++i) {
+        const std::string username = regularUsers[i];
+        if (i < 4 || i == 19) add(i * 3, username, "198.51.100.80", "office_shared", "success");
+        else add(i * 3, username, "192.0.2." + std::to_string(100 + i), "device_" + username, "success");
     }
+    add(11, "user_02", "203.0.113.9", "phone_02", "success");
+    add(28, "user_09", "198.51.100.9", "tablet_09", "success");
+    add(40, "user_12", "203.0.113.12", "tablet_12", "success");
+    add(55, "user_19", "192.0.2.119", "laptop_19", "success");
+    for (int i = 0; i < 17; ++i)
+        add(1 + i * 3, "user_" + std::to_string(i + 21),
+            "192.0.2.44", "scanner_alpha", "failed");
+    for (int i = 0; i < 8; ++i)
+        add(30 + i * 4, "user_" + std::to_string(i + 41),
+            "203.0.113.88", "scanner_beta", "failed");
+    const std::array<int, 8> focusedTimes{{11, 18, 25, 33, 42, 49, 56, 59}};
+    for (int i = 0; i < static_cast<int>(focusedTimes.size()); ++i)
+        add(focusedTimes[i], "user_52", "203.0.113.66", i % 3 == 0 ? "unknown_device_52" : "device_52",
+            i == 4 ? "success" : "failed");
+    const std::array<const char*, 7> userIps{{
+        "198.51.100.25", "203.0.113.18", "198.51.100.55", "203.0.113.33",
+        "198.51.100.25", "203.0.113.18", "198.51.100.55"
+    }};
+    const std::array<int, 7> userTimes{{5, 14, 23, 32, 41, 50, 59}};
+    for (int i = 0; i < static_cast<int>(userTimes.size()); ++i)
+        add(userTimes[i], "user_07", userIps[i], "device_user_07",
+            (i == 2 || i == 4 || i == 6) ? "success" : "failed");
+    add(17, "user_03", "198.51.100.80", "office_shared", "failed");
+    add(35, "user_04", "198.51.100.80", "office_shared", "failed");
+    add(20, "user_05", "203.0.113.140", "device_user_05", "failed");
+    add(46, "user_16", "192.0.2.201", "device_user_16", "failed");
+    add(54, "user_18", "198.51.100.24", "device_user_18", "failed");
+    add(56, "user_27", "192.0.2.44", "scanner_alpha", "success");
+    add(51, "user_52", "198.51.100.152", "desktop_52", "success");
+    std::stable_sort(events.begin(), events.end(),
+                     [](const LoginEvent& a, const LoginEvent& b) { return a.seconds < b.seconds; });
     return events;
 }
 
@@ -417,13 +469,15 @@ Analysis analyze(const std::vector<LoginEvent>& events) {
         auto& device = deviceActivity[event.device];
         device.accounts.insert(event.username);
         device.ips.insert(event.ip);
-        if (event.status == "failed" && latestEventTime - event.seconds <= WINDOW_SECONDS)
+        const bool failedAttempt = event.status == "failed" || event.status == "blocked";
+        if (failedAttempt && latestEventTime - event.seconds <= WINDOW_SECONDS)
             ++device.recentFailures;
         if (event.status == "success") {
             ++result.success;
             continue;
         }
-        ++result.failed;
+        if (event.status == "blocked") ++result.blocked;
+        else ++result.failed;
         auto& ipFailures = failures[event.ip];
         auto& ipTargets = targets[event.ip];
         ipFailures.push_back({event.seconds, event.username, event.device});
@@ -541,10 +595,12 @@ void drawChart(HDC dc, int x, int y, int width, int height) {
     const int chartWidth = width - 48;
     std::array<int, 8> totals{};
     std::array<int, 8> failed{};
+    std::array<int, 8> blocked{};
     for (size_t i = 0; i < g_events.size(); ++i) {
         const size_t bucket = std::min<size_t>(7, i * 8 / std::max<size_t>(1, g_events.size()));
         ++totals[bucket];
         if (g_events[i].status == "failed") ++failed[bucket];
+        if (g_events[i].status == "blocked") ++blocked[bucket];
     }
     const int peak = std::max(1, *std::max_element(totals.begin(), totals.end()));
     HPEN grid = CreatePen(PS_DOT, 1, BORDER);
@@ -563,8 +619,11 @@ void drawChart(HDC dc, int x, int y, int width, int height) {
         const int bx = chartLeft + i * slot + (slot - barW) / 2;
         const int totalH = totals[i] ? std::max(5, totals[i] * (chartHeight - 5) / peak) : 3;
         const int failH = totals[i] ? failed[i] * totalH / totals[i] : 0;
-        fillRect(dc, bx, chartBottom - totalH, barW, totalH - failH, GREEN);
-        if (failH > 0) fillRect(dc, bx, chartBottom - failH, barW, failH, RED);
+        const int blockedH = totals[i] ? blocked[i] * totalH / totals[i] : 0;
+        const int successH = std::max(0, totalH - failH - blockedH);
+        if (successH > 0) fillRect(dc, bx, chartBottom - totalH, barW, successH, GREEN);
+        if (failH > 0) fillRect(dc, bx, chartBottom - blockedH - failH, barW, failH, RED);
+        if (blockedH > 0) fillRect(dc, bx, chartBottom - blockedH, barW, blockedH, BLUE);
         drawText(dc, bx - 2, chartBottom + 6, barW + 4, 14,
                  L"B" + std::to_wstring(i + 1), MUTED, 8, false,
                  DT_CENTER | DT_VCENTER | DT_SINGLELINE);
@@ -627,7 +686,208 @@ void drawDeviceHealthBar(HDC dc, int x, int y, int width, int height,
     DeleteObject(particleBrush);
 }
 
+void drawWorkspacePage(HDC dc, int width, int height) {
+    if (g_activePage == 0) return;
+    const int x = SIDEBAR_W + 28;
+    const int contentW = width - x - 28;
+    fillRect(dc, SIDEBAR_W, 0, width - SIDEBAR_W, height, BG);
+    drawPainterlyWash(dc, SIDEBAR_W, 0, width - SIDEBAR_W, height, 0x6D21u + g_activePage);
+    const std::array<const wchar_t*, 7> titles{{
+        L"Overview", L"Login activity", L"IP intelligence", L"Review alerts",
+        L"Signal flow", L"Device scan", L"Demo actions"
+    }};
+    drawText(dc, x, 25, contentW, 16, L"LOGINSHIELD NG  /  WORKSPACE", MUTED, 9, true);
+    drawText(dc, x, 47, contentW, 39, titles[g_activePage], TEXT, 25, true);
+
+    if (g_activePage == 1) {
+        drawText(dc, x, 94, contentW, 18,
+                 L"Every event in the active feed, newest first. Use Import CSV to load a different scenario.", MUTED, 9);
+        roundedPanel(dc, x, 126, contentW, height - 160);
+        const int headY = 145;
+        drawText(dc, x + 18, headY, 74, 16, L"TIME", MUTED, 8, true);
+        drawText(dc, x + 102, headY, 115, 16, L"ACCOUNT", MUTED, 8, true);
+        drawText(dc, x + 230, headY, 136, 16, L"IP ADDRESS", MUTED, 8, true);
+        drawText(dc, x + 380, headY, 150, 16, L"DEVICE", MUTED, 8, true);
+        drawText(dc, x + contentW - 116, headY, 92, 16, L"RESULT", MUTED, 8, true,
+                 DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+        const int rowH = 31;
+        int row = 0;
+        int visibleRow = 0;
+        for (auto it = g_events.rbegin(); it != g_events.rend(); ++it) {
+            if (row++ < g_workspaceScroll) continue;
+            const int y = headY + 22 + visibleRow * rowH;
+            if (y + rowH > height - 42) break;
+            fillRect(dc, x + 15, y, contentW - 30, 1, BORDER);
+            drawTextA(dc, x + 18, y + 4, 78, 21, it->time, MUTED, 8);
+            drawTextA(dc, x + 102, y + 4, 118, 21, it->username, TEXT, 8, true);
+            drawTextA(dc, x + 230, y + 4, 140, 21, it->ip, RGB(201, 212, 223), 8);
+            drawTextA(dc, x + 380, y + 4, 150, 21, it->device, MUTED, 8);
+            const bool blocked = it->status == "blocked";
+            const bool failed = it->status == "failed";
+            const wchar_t* label = blocked ? L"BLOCKED (DEMO)" : (failed ? L"FAILED" : L"SUCCESS");
+            const COLORREF color = blocked ? BLUE : (failed ? RED : GREEN);
+            drawText(dc, x + contentW - 130, y + 4, 104, 21, label, color, 8, true,
+                     DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+            ++visibleRow;
+        }
+        if (g_events.empty()) drawText(dc, x + 22, 182, contentW - 44, 32, L"No events in this feed yet.", MUTED, 10);
+    } else if (g_activePage == 2) {
+        drawText(dc, x, 94, contentW, 18,
+                 L"Source IPs grouped by observed attempts. Demo block actions affect only the next demo replay.", MUTED, 9);
+        roundedPanel(dc, x, 126, contentW, height - 160);
+        const int headY = 145;
+        drawText(dc, x + 18, headY, 170, 16, L"SOURCE IP", MUTED, 8, true);
+        drawText(dc, x + 215, headY, 95, 16, L"ATTEMPTS", MUTED, 8, true);
+        drawText(dc, x + 330, headY, 110, 16, L"ACCOUNTS", MUTED, 8, true);
+        drawText(dc, x + 455, headY, 100, 16, L"DEVICES", MUTED, 8, true);
+        g_actionHits.clear();
+        const int rowH = 48;
+        int row = 0;
+        for (const auto& item : g_analysis.ipRows) {
+            if (row++ < g_workspaceScroll) continue;
+            const int y = headY + 22 + (row - g_workspaceScroll - 1) * rowH;
+            if (y + rowH > height - 34) break;
+            fillRect(dc, x + 15, y, contentW - 30, 1, BORDER);
+            drawTextA(dc, x + 18, y + 4, 180, 20, item.ip, TEXT, 9, true);
+            drawTextA(dc, x + 215, y + 4, 95, 20, std::to_string(item.failures), item.level == "ELEVATED" ? RED : AMBER, 9, true);
+            drawTextA(dc, x + 330, y + 4, 100, 20, std::to_string(item.accounts), MUTED, 9);
+            drawTextA(dc, x + 455, y + 4, 80, 20, std::to_string(item.devices), MUTED, 9);
+            const std::string key = "IP:" + item.ip;
+            const bool blocked = g_demoBlockedIps.find(key) != g_demoBlockedIps.end();
+            const int bx = x + contentW - 160;
+            button(dc, bx, y + 5, 139, 28, blocked ? L"UNBLOCK (DEMO)" : L"BLOCK IP (DEMO)");
+            g_actionHits.push_back({bx, y + 5, bx + 139, y + 33, key});
+            drawTextA(dc, x + 18, y + 24, contentW - 185, 16, item.level + " risk · demo policy only", MUTED, 8);
+        }
+        if (g_analysis.ipRows.empty()) drawText(dc, x + 22, 182, contentW - 44, 32, L"No source IP activity to review.", MUTED, 10);
+    } else if (g_activePage == 3) {
+        drawText(dc, x, 94, contentW, 18, L"Signals are review prompts. Confirm context before taking any action.", MUTED, 9);
+        roundedPanel(dc, x, 126, contentW, height - 160);
+        const int rowH = 59;
+        for (int i = g_workspaceScroll; i < static_cast<int>(g_analysis.alerts.size()); ++i) {
+            const int y = 144 + (i - g_workspaceScroll) * rowH;
+            if (y + rowH > height - 36) break;
+            fillRect(dc, x + 15, y, contentW - 30, 1, BORDER);
+            const auto& alert = g_analysis.alerts[i];
+            drawTextA(dc, x + 20, y + 5, contentW - 50, 20, alert.title, alert.high ? RED : AMBER, 10, true);
+            drawTextA(dc, x + 20, y + 27, contentW - 50, 25, alert.time + "  ·  " + alert.detail, MUTED, 8);
+        }
+        if (g_analysis.alerts.empty()) drawText(dc, x + 22, 182, contentW - 44, 32, L"No review alerts in this feed.", MUTED, 10);
+    } else if (g_activePage == 4) {
+        drawText(dc, x, 94, contentW, 18, L"A live view of how the current feed moves from events to correlation and review.", MUTED, 9);
+        const int boxY = 139;
+        const int boxGap = 12;
+        const int boxW = (contentW - boxGap * 3) / 4;
+        const std::array<const wchar_t*, 4> flowLabels{{L"EVENTS", L"CORRELATION", L"REVIEW ALERTS", L"DEMO ACTIONS"}};
+        const std::array<std::wstring, 4> flowValues{{
+            std::to_wstring(g_events.size()), std::to_wstring(g_analysis.reviewIps),
+            std::to_wstring(g_analysis.alerts.size()), std::to_wstring(g_analysis.blocked)
+        }};
+        for (int i = 0; i < 4; ++i) {
+            const int bx = x + i * (boxW + boxGap);
+            roundedPanel(dc, bx, boxY, boxW, 105);
+            drawText(dc, bx + 14, boxY + 14, boxW - 28, 18, flowLabels[i], MUTED, 8, true);
+            drawText(dc, bx + 14, boxY + 41, boxW - 28, 42, flowValues[i], i == 3 ? BLUE : TEXT, 27, true);
+            if (i < 3) drawText(dc, bx + boxW - 14, boxY + 44, 20, 30, L"›", AMBER, 22, true);
+        }
+        roundedPanel(dc, x, boxY + 122, contentW, height - boxY - 154);
+        drawPanelTitle(dc, x, boxY + 122, contentW, L"Latest signal flow", L"Recent events and their current outcomes");
+        int row = 0;
+        for (auto it = g_events.rbegin(); it != g_events.rend() && boxY + 190 + row * 28 < height - 40; ++it, ++row) {
+            const int y = boxY + 180 + row * 28;
+            drawTextA(dc, x + 22, y, 78, 20, it->time, MUTED, 8);
+            drawTextA(dc, x + 110, y, 150, 20, it->username, TEXT, 8, true);
+            drawTextA(dc, x + 275, y, 150, 20, it->ip, RGB(201, 212, 223), 8);
+            drawTextA(dc, x + 450, y, 160, 20, it->device, MUTED, 8);
+            const bool blocked = it->status == "blocked";
+            drawText(dc, x + contentW - 135, y, 110, 20, blocked ? L"BLOCKED (DEMO)" : L"REVIEWED",
+                     blocked ? BLUE : GREEN, 8, true, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+        }
+    } else if (g_activePage == 5) {
+        drawText(dc, x, 94, contentW, 18, L"Scan here means inspect devices named in the event feed; it does not probe a network device.", MUTED, 9);
+        const int listW = static_cast<int>(contentW * .43);
+        roundedPanel(dc, x, 126, listW, height - 160);
+        roundedPanel(dc, x + listW + 12, 126, contentW - listW - 12, height - 160);
+        drawPanelTitle(dc, x, 126, listW, L"Observed devices", L"Select a row to inspect its events");
+        drawPanelTitle(dc, x + listW + 12, 126, contentW - listW - 12, L"Device detail", L"Evidence from the current feed");
+        const int rowH = 43;
+        int row = 0;
+        for (const auto& device : g_analysis.deviceRows) {
+            if (row++ < g_workspaceScroll) continue;
+            const int y = 178 + (row - g_workspaceScroll - 1) * rowH;
+            if (y + rowH > height - 45) break;
+            const bool selected = device.device == g_selectedDevice;
+            if (selected) fillRect(dc, x + 10, y - 1, listW - 20, rowH - 2, RGB(28, 43, 48));
+            drawTextA(dc, x + 18, y + 1, listW - 35, 18, device.device, TEXT, 9, true);
+            drawTextA(dc, x + 18, y + 20, listW - 35, 16,
+                      std::to_string(device.recentFailures) + " recent failures · " + std::to_string(device.health) + "% health",
+                      device.score >= 65 ? RED : (device.score >= 35 ? AMBER : MUTED), 8);
+            g_actionHits.push_back({x + 10, y - 1, x + listW - 10, y + rowH - 2, "DEVICE:" + device.device});
+        }
+        int detailRow = 0;
+        for (auto it = g_events.rbegin(); it != g_events.rend() && detailRow < 10; ++it) {
+            if (it->device != g_selectedDevice) continue;
+            const int y = 181 + detailRow * 38;
+            drawTextA(dc, x + listW + 28, y, 72, 20, it->time, MUTED, 8);
+            drawTextA(dc, x + listW + 106, y, 112, 20, it->username, TEXT, 8, true);
+            drawTextA(dc, x + listW + 224, y, 143, 20, it->ip, RGB(201, 212, 223), 8);
+            const bool blocked = it->status == "blocked";
+            const bool failed = it->status == "failed";
+            drawText(dc, x + contentW - 111, y, 82, 20, blocked ? L"BLOCKED" : (failed ? L"FAILED" : L"SUCCESS"),
+                     blocked ? BLUE : (failed ? RED : GREEN), 8, true, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+            ++detailRow;
+        }
+        if (g_selectedDevice.empty()) drawText(dc, x + listW + 30, 184, contentW - listW - 72, 34, L"Choose an observed device to see its event trail.", MUTED, 9);
+        if (detailRow == 0 && !g_selectedDevice.empty()) drawText(dc, x + listW + 30, 184, contentW - listW - 72, 34, L"No events for this device in the current feed.", MUTED, 9);
+    } else if (g_activePage == 6) {
+        drawText(dc, x, 94, contentW, 18, L"Simulated only: these rules affect the next demo replay. They never change a real account, firewall, or network.", AMBER, 9);
+        roundedPanel(dc, x, 126, contentW, 86, RGB(37, 31, 25));
+        drawText(dc, x + 18, 143, contentW - 36, 20, L"DEMO BLOCK SIMULATION", AMBER, 10, true);
+        drawText(dc, x + 18, 168, contentW - 36, 22,
+                 L"Events matching a blocked account or IP are shown as BLOCKED (DEMO) when replayed.", MUTED, 9);
+        const int gap = 14;
+        const int colW = (contentW - gap) / 2;
+        const int startY = 229;
+        roundedPanel(dc, x, startY, colW, height - startY - 44);
+        roundedPanel(dc, x + colW + gap, startY, colW, height - startY - 44);
+        drawPanelTitle(dc, x, startY, colW, L"Accounts", L"Block a synthetic account");
+        drawPanelTitle(dc, x + colW + gap, startY, colW, L"Source IPs", L"Block a source in the demo");
+        std::set<std::string> accounts, ips;
+        for (const auto& event : g_scenarioEvents) { accounts.insert(event.username); ips.insert(event.ip); }
+        for (const auto& event : g_events) { accounts.insert(event.username); ips.insert(event.ip); }
+        g_actionHits.clear();
+        const int rowH = 34;
+        int accountRow = 0;
+        for (const auto& account : accounts) {
+            if (accountRow++ < g_workspaceScroll) continue;
+            const int y = startY + 59 + (accountRow - g_workspaceScroll - 1) * rowH;
+            if (y + rowH > height - 54) break;
+            drawTextA(dc, x + 18, y + 4, colW - 147, 22, account, TEXT, 8, true);
+            const std::string key = "ACCOUNT:" + account;
+            const bool blocked = g_demoBlockedAccounts.find(key) != g_demoBlockedAccounts.end();
+            const int bx = x + colW - 126;
+            button(dc, bx, y, 112, 27, blocked ? L"UNBLOCK" : L"BLOCK");
+            g_actionHits.push_back({bx, y, bx + 112, y + 27, key});
+        }
+        int ipRow = 0;
+        for (const auto& ip : ips) {
+            if (ipRow++ < g_workspaceScroll) continue;
+            const int y = startY + 59 + (ipRow - g_workspaceScroll - 1) * rowH;
+            if (y + rowH > height - 54) break;
+            drawTextA(dc, x + colW + gap + 18, y + 4, colW - 147, 22, ip, TEXT, 8, true);
+            const std::string key = "IP:" + ip;
+            const bool blocked = g_demoBlockedIps.find(key) != g_demoBlockedIps.end();
+            const int bx = x + 2 * colW + gap - 126;
+            button(dc, bx, y, 112, 27, blocked ? L"UNBLOCK" : L"BLOCK");
+            g_actionHits.push_back({bx, y, bx + 112, y + 27, key});
+        }
+        drawText(dc, x, height - 28, contentW, 16,
+                 L"Simulated outcomes in this replay: " + std::to_wstring(g_analysis.blocked), BLUE, 8, false);
+    }
+}
+
 void paintDashboard(HWND hwnd, HDC dc) {
+    g_actionHits.clear();
     RECT client{};
     GetClientRect(hwnd, &client);
     const int width = client.right;
@@ -647,23 +907,26 @@ void paintDashboard(HWND hwnd, HDC dc) {
     drawText(dc, 74, 47, 126, 16, L"SECURITY CONSOLE", MUTED, 8, false);
 
     drawText(dc, 23, 100, 170, 18, L"WORKSPACE", RGB(113, 129, 150), 9, true);
-    const std::array<const wchar_t*, 4> nav{L"Overview", L"Login activity", L"IP intelligence", L"Review alerts"};
-    const std::array<const wchar_t*, 4> icons{L"◫", L"⌁", L"◎", L"△"};
-    for (int i = 0; i < 4; ++i) {
-        const int ny = 130 + i * 42;
-        if (i == 0) {
+    const std::array<const wchar_t*, 7> nav{{
+        L"Overview", L"Login activity", L"IP intelligence", L"Review alerts",
+        L"Signal flow", L"Device scan", L"Demo actions"
+    }};
+    const std::array<const wchar_t*, 7> icons{{L"◫", L"⌁", L"◎", L"△", L"↝", L"◉", L"⊘"}};
+    for (int i = 0; i < static_cast<int>(nav.size()); ++i) {
+        const int ny = 122 + i * 37;
+        if (i == g_activePage) {
             HBRUSH active = CreateSolidBrush(RGB(18, 44, 39));
-            RECT rect{12, ny, SIDEBAR_W - 12, ny + 35};
+            RECT rect{12, ny, SIDEBAR_W - 12, ny + 32};
             FillRect(dc, &rect, active);
             DeleteObject(active);
         }
-        drawText(dc, 24, ny, 22, 35, icons[i], i == 0 ? GREEN : MUTED, 15, true,
+        drawText(dc, 24, ny, 22, 32, icons[i], i == g_activePage ? GREEN : MUTED, 15, true,
                  DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-        drawText(dc, 53, ny, 145, 35, nav[i], i == 0 ? GREEN : RGB(154, 171, 189), 10, i == 0);
+        drawText(dc, 53, ny, 145, 32, nav[i], i == g_activePage ? GREEN : RGB(154, 171, 189), 9, i == g_activePage);
     }
-    drawVortexPainting(dc, SIDEBAR_W / 2, height / 2 + 20, 72, 43);
-    drawText(dc, 24, height / 2 + 77, SIDEBAR_W - 48, 18,
-             L"SIGNAL FLOW", AMBER, 8, true, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    drawVortexPainting(dc, SIDEBAR_W / 2, height / 2 + 50, 61, 34);
+    drawText(dc, 24, height / 2 + 94, SIDEBAR_W - 48, 16,
+             L"DEMO SIGNAL FLOW", AMBER, 8, true, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     roundedPanel(dc, 14, height - 139, SIDEBAR_W - 28, 119, RGB(16, 25, 35));
     drawText(dc, 26, height - 127, SIDEBAR_W - 52, 19, L"REVIEW BEFORE ACTION", GREEN, 9, true);
     drawText(dc, 26, height - 103, SIDEBAR_W - 52, 69,
@@ -675,7 +938,7 @@ void paintDashboard(HWND hwnd, HDC dc) {
     drawText(dc, x, 24, 330, 16, L"LOGINSHIELD NG  /  OVERVIEW", MUTED, 9, true);
     drawText(dc, x, 44, 390, 42, L"Threat monitoring", TEXT, 26, true);
     const int buttonY = 34;
-    button(dc, x + contentW - 445, buttonY, 112, 34, L"Run live demo");
+    button(dc, x + contentW - 445, buttonY, 112, 34, L"Replay demo");
     button(dc, x + contentW - 323, buttonY, 92, 34, L"Reset demo");
     button(dc, x + contentW - 221, buttonY, 104, 34, L"Import CSV");
     button(dc, x + contentW - 109, buttonY, 109, 34, L"Export report", true);
@@ -798,17 +1061,20 @@ void paintDashboard(HWND hwnd, HDC dc) {
         drawTextA(dc, rightX + 84, ey + 3, 85, 19, it->username, TEXT, 8, true);
         drawTextA(dc, rightX + 173, ey + 3, 120, 19, it->ip, RGB(201, 212, 223), 8);
         drawTextA(dc, rightX + 296, ey + 3, 88, 19, it->device, MUTED, 8);
-        drawText(dc, rightX + rightW - 76, ey + 3, 63, 19,
-                 it->status == "failed" ? L"● FAILED" : L"● SUCCESS",
-                 it->status == "failed" ? RED : GREEN, 8, true,
+        const bool blocked = it->status == "blocked";
+        const bool failed = it->status == "failed";
+        drawText(dc, rightX + rightW - 88, ey + 3, 75, 19,
+                 blocked ? L"● BLOCKED" : (failed ? L"● FAILED" : L"● SUCCESS"),
+                 blocked ? BLUE : (failed ? RED : GREEN), 8, true,
                  DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
         ++eventRow;
     }
     if (eventRow == 0)
         drawText(dc, rightX + 16, eventHeadY + 30, rightW - 32, 35, L"No events match this view.", MUTED, 9);
     drawText(dc, x, height - 18, contentW, 15,
-             L"LOCAL DEMO / CSV INPUT     ·     REVIEW ALERTS BEFORE ACTING     ·     NO AUTOMATIC BLOCKING",
+             L"DEMO / CSV INPUT     ·     USE DEMO ACTIONS TO SIMULATE BLOCKS     ·     NO LIVE CONNECTOR",
              RGB(112, 128, 149), 8, false);
+    drawWorkspacePage(dc, width, height);
 }
 
 void showError(const std::wstring& message) {
@@ -824,7 +1090,7 @@ void importCsv() {
     dialog.lpstrFile = fileName;
     dialog.nMaxFile = MAX_PATH;
     dialog.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
-    dialog.lpstrTitle = L"Import synthetic login events";
+    dialog.lpstrTitle = L"Import login events";
     if (!GetOpenFileNameW(&dialog)) return;
     std::vector<LoginEvent> loaded;
     std::wstring error;
@@ -832,9 +1098,14 @@ void importCsv() {
         showError(error);
         return;
     }
+    g_scenarioEvents = loaded;
     g_events = std::move(loaded);
     KillTimer(g_window, 2);
     g_playback = false;
+    g_demoBlockedAccounts.clear();
+    g_demoBlockedIps.clear();
+    g_selectedDevice.clear();
+    g_workspaceScroll = 0;
     const std::wstring path(fileName);
     const size_t slash = path.find_last_of(L"\\/");
     g_feedName = "CSV FEED: " + std::string(path.begin() + (slash == std::wstring::npos ? 0 : slash + 1), path.end());
@@ -864,6 +1135,7 @@ void exportReport() {
     output << "Total events: " << g_events.size() << "\n";
     output << "Failed logins: " << g_analysis.failed << "\n";
     output << "Successful logins: " << g_analysis.success << "\n";
+    output << "Blocked in demo replay: " << g_analysis.blocked << "\n";
     output << "Accounts targeted: " << g_analysis.targetedAccounts << "\n";
     output << "Review alerts: " << g_analysis.alerts.size() << "\n\n";
     output << "REVIEW ALERTS\n" << std::string(35, '=') << "\n";
@@ -875,7 +1147,7 @@ void exportReport() {
     for (const auto& event : g_events)
         output << event.time << " | " << event.username << " | " << event.ip << " | "
                << event.device << " | " << event.status << "\n";
-    output << "\nReview alerts before acting. Shared IPs are not automatically blocked.\n";
+    output << "\nDemo block outcomes are simulations only; no real account, firewall, or network was changed.\n";
     MessageBoxW(g_window, L"Report saved successfully.", L"LoginShield NG", MB_OK | MB_ICONINFORMATION);
 }
 
@@ -883,19 +1155,25 @@ void resetDemo() {
     KillTimer(g_window, 2);
     g_playback = false;
     g_events = demoEvents();
+    g_scenarioEvents = g_events;
     g_feedName = "DEMO FEED";
     g_failedOnly = false;
+    g_demoBlockedAccounts.clear();
+    g_demoBlockedIps.clear();
+    g_selectedDevice.clear();
+    g_activePage = 0;
+    g_workspaceScroll = 0;
     g_analysis = analyze(g_events);
     InvalidateRect(g_window, nullptr, TRUE);
 }
 
 void runLiveScenario() {
-    g_scenarioEvents = demoEvents();
+    if (g_scenarioEvents.empty()) g_scenarioEvents = demoEvents();
     g_events.clear();
     g_playbackIndex = 0;
     g_playback = true;
     g_failedOnly = false;
-    g_feedName = "LIVE DEMO SCENARIO";
+    g_feedName = "SIMULATED DEMO REPLAY";
     g_analysis = analyze(g_events);
     SetTimer(g_window, 2, 850, nullptr);
     InvalidateRect(g_window, nullptr, TRUE);
@@ -921,7 +1199,9 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             InvalidateRect(hwnd, &devicePanel, FALSE);
         } else if (wParam == 2 && g_playback) {
             if (g_playbackIndex < g_scenarioEvents.size()) {
-                g_events.push_back(g_scenarioEvents[g_playbackIndex++]);
+                LoginEvent event = g_scenarioEvents[g_playbackIndex++];
+                if (isDemoBlocked(event)) event.status = "blocked";
+                g_events.push_back(std::move(event));
                 g_analysis = analyze(g_events);
                 InvalidateRect(hwnd, nullptr, TRUE);
             } else {
@@ -959,6 +1239,29 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         GetClientRect(hwnd, &rect);
         const int contentX = SIDEBAR_W + 28;
         const int contentW = rect.right - contentX - 28;
+        if (mx < SIDEBAR_W && my >= 122 && my < 122 + 7 * 37) {
+            g_activePage = std::min(6, (my - 122) / 37);
+            g_workspaceScroll = 0;
+            InvalidateRect(hwnd, nullptr, TRUE);
+            return 0;
+        }
+        for (const auto& hit : g_actionHits) {
+            if (mx < hit.left || mx > hit.right || my < hit.top || my > hit.bottom) continue;
+            if (hit.key.rfind("DEVICE:", 0) == 0) {
+                g_selectedDevice = hit.key.substr(7);
+                g_activePage = 5;
+            } else if (hit.key.rfind("ACCOUNT:", 0) == 0) {
+                auto found = g_demoBlockedAccounts.find(hit.key);
+                if (found == g_demoBlockedAccounts.end()) g_demoBlockedAccounts.insert(hit.key);
+                else g_demoBlockedAccounts.erase(found);
+            } else if (hit.key.rfind("IP:", 0) == 0) {
+                auto found = g_demoBlockedIps.find(hit.key);
+                if (found == g_demoBlockedIps.end()) g_demoBlockedIps.insert(hit.key);
+                else g_demoBlockedIps.erase(found);
+            }
+            InvalidateRect(hwnd, nullptr, TRUE);
+            return 0;
+        }
         if (my >= 34 && my <= 68) {
             if (mx >= contentX + contentW - 445 && mx < contentX + contentW - 333) runLiveScenario();
             else if (mx >= contentX + contentW - 323 && mx < contentX + contentW - 231) resetDemo();
@@ -982,6 +1285,29 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             }
             (void)bottomH;
         }
+        return 0;
+    }
+    case WM_MOUSEWHEEL: {
+        if (g_activePage == 0 || g_activePage == 4) return 0;
+        RECT client{};
+        GetClientRect(hwnd, &client);
+        const int height = static_cast<int>(client.bottom);
+        const int visibleRows = std::max(1, (height - 220) / (g_activePage == 2 ? 48 : 34));
+        int itemCount = 0;
+        if (g_activePage == 1) itemCount = static_cast<int>(g_events.size());
+        else if (g_activePage == 2) itemCount = static_cast<int>(g_analysis.ipRows.size());
+        else if (g_activePage == 3) itemCount = static_cast<int>(g_analysis.alerts.size());
+        else if (g_activePage == 5) itemCount = static_cast<int>(g_analysis.deviceRows.size());
+        else if (g_activePage == 6) {
+            std::set<std::string> accounts, ips;
+            for (const auto& event : g_scenarioEvents) { accounts.insert(event.username); ips.insert(event.ip); }
+            for (const auto& event : g_events) { accounts.insert(event.username); ips.insert(event.ip); }
+            itemCount = static_cast<int>(std::max(accounts.size(), ips.size()));
+        }
+        const int maximum = std::max(0, itemCount - visibleRows);
+        const int movement = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? -3 : 3;
+        g_workspaceScroll = std::max(0, std::min(maximum, g_workspaceScroll + movement));
+        InvalidateRect(hwnd, nullptr, TRUE);
         return 0;
     }
     case WM_GETMINMAXINFO: {
