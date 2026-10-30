@@ -48,3 +48,8 @@ The synthetic demo files use documentation-only IP addresses. The public honeypo
 ## Live local Windows monitor companion
 
 The C++ desktop app and browser dashboard above remain demo analyzers. An optional read-only companion is now available in [live_monitor/](live_monitor/README.md). It queries this Windows PC's Security log for failed-logon event 4625 and highlights repeated attempts for review. It stores parsed events locally, requires the Windows account to already have Security log read access, and never blocks accounts or changes system settings. Run with `python live_monitor.py --demo` from that folder to view synthetic sample events, or `python live_monitor.py` on Windows to try local event collection.
+
+
+## Native C++ live-monitor interface
+
+A separate Win32/GDI C++17 monitor is available under [live_monitor_cpp/](live_monitor_cpp/README.md). It reads local Windows Security Event ID 4625 records and shows review-only thresholds in the same native C++ visual style. It does not replace or modify the existing LoginShield demo dashboard, and it never blocks accounts or changes Windows settings. Use `LoginShieldLiveMonitor.exe --demo` for sample events or run it normally to query the local Security log.
