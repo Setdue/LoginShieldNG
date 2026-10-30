@@ -1,20 +1,22 @@
 # LoginShield NG
 
-LoginShield NG is a Windows desktop prototype for reviewing synthetic login events. Its main interface is written in C++ with the Windows API. A standalone browser dashboard and the earlier Python prototype are included too.
+Hi, I'm **Setdue**, the creator of LoginShield NG. I built this project to explore a clearer, more visual way to review login activity and spot patterns that may deserve attention. It grew from an earlier Python prototype into a Windows desktop interface, alongside a standalone browser dashboard.
+
+LoginShield NG is a prototype for reviewing synthetic login events. The main interface is written in C++ with the Windows API.
+
+## What it does
+
+- Replays synthetic login events in a live demo.
+- Shows per-device health bars. Failed attempts and account/IP spread affect a demonstration signal score, which also drives the particle effects.
+- Highlights IP correlations and account-targeting patterns for human review.
+- Imports event data from CSV and exports a text report.
+- Includes a standalone browser dashboard and an earlier Python prototype.
+
+I made this as a learning and interface-design project: I wanted to make event patterns easier to see and explore, while keeping the analysis understandable. The score is a demonstration heuristic, not a reliable identity signal. IP addresses can be shared by many people and devices. Alerts are for review; the program does not block accounts or IP addresses and is not connected to a live login service.
 
 ## C++ desktop app
 
-The desktop UI includes:
-
-- A live demo that replays synthetic login events.
-- Per-device health bars. Failed attempts and account/IP spread increase the device signal score; particle count and speed rise with that score.
-- IP correlation and account-targeting review alerts.
-- CSV import and text report export.
-- A painterly cosmic visual treatment with a vortex emblem and curved, luminous trails.
-
-The device score is a demonstration heuristic. It is not a reliable identity signal: an IP address can be shared by many people and devices. Alerts are for review; the program does not block accounts or IP addresses.
-
-## Build on Windows
+### Build on Windows
 
 1. Open `LoginShieldNG.cbp` in Code::Blocks.
 2. Choose **Build → Build and Run**.
@@ -42,4 +44,3 @@ Time format is `HH:MM:SS`. Status must be `failed` or `success`. `demo_events.cs
 Generated reports, compiled executables, Code::Blocks build folders, and the empty `live_monitor.py` placeholder are left out of the source bundle.
 
 All sample events use documentation-only IP addresses. Use only logs you are authorized to review.
-
