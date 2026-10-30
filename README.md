@@ -43,3 +43,8 @@ Open `dashboard.html` in a browser. The page supports CSV import, event search a
 
 The synthetic demo files use documentation-only IP addresses. The public honeypot sample uses source IPs anonymized by its authors. Use only logs you are authorized to review.
 
+
+
+## Live local Windows monitor companion
+
+The C++ desktop app and browser dashboard above remain demo analyzers. An optional read-only companion is now available in [live_monitor/](live_monitor/README.md). It queries this Windows PC's Security log for failed-logon event 4625 and highlights repeated attempts for review. It stores parsed events locally, requires the Windows account to already have Security log read access, and never blocks accounts or changes system settings. Run with `python live_monitor.py --demo` from that folder to view synthetic sample events, or `python live_monitor.py` on Windows to try local event collection.
