@@ -29,7 +29,7 @@ time,username,ip,device,status
 14:32:00,user_01,198.51.100.80,office_shared,success
 ```
 
-Time format is `HH:MM:SS`. Status must be `failed` or `success`. `demo_events.csv` is a compact sample; `demo_events_elaborate.csv` contains a richer 71-event scenario. The detector reviews events in a 60-second window.
+Time format is `HH:MM:SS`. Status must be `failed` or `success`. `demo_events.csv` is a compact sample; `demo_events_elaborate.csv` contains a richer 71-event scenario. `public_honeypot_login_events.csv` contains 196 real, anonymized failed-login events from a public research honeynet dataset. See `PUBLIC_DATASET_ATTRIBUTION.md` for source details and field mapping. The detector reviews events in a 60-second window.
 
 ## Browser dashboard
 
@@ -39,5 +39,5 @@ Open `dashboard.html` in a browser. The page supports CSV import, event search a
 
 `event_processor.py`, `login_detector.py`, `main.py`, `risk_scorer.py`, `test_detector.py`, and `threat_detector.py` are earlier Python prototype files. They are not needed to build the C++ desktop app.
 
-All sample events use documentation-only IP addresses. Use only logs you are authorized to review.
+The synthetic demo files use documentation-only IP addresses. The public honeypot sample uses source IPs anonymized by its authors. Use only logs you are authorized to review.
 
