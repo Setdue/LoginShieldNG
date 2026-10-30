@@ -1,0 +1,11 @@
+time,username,ip,device,status
+10:00:00,user_01,192.0.2.10,device_A,failed
+10:00:10,user_02,192.0.2.10,device_B,failed
+10:00:20,user_03,192.0.2.10,device_B,failed
+10:00:25,user_01,192.0.2.20,device_C,failed
+10:00:30,user_01,192.0.2.10,device_A,failed
+10:00:40,user_03,192.0.2.10,device_B,success
+10:00:50,user_01,192.0.2.20,device_C,failed
+10:00:58,user_02,192.0.2.20,device_C,failed
+10:00:59,user_03,192.0.2.20,device_C,failed
+
