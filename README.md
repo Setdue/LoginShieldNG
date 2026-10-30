@@ -31,6 +31,8 @@ time,username,ip,device,status
 
 Time format is `HH:MM:SS`. Status must be `failed` or `success`. `demo_events.csv` is a compact sample; `demo_events_elaborate.csv` contains a richer 71-event scenario. `public_honeypot_login_events.csv` contains 196 real, anonymized failed-login events from a public research honeynet dataset. See `PUBLIC_DATASET_ATTRIBUTION.md` for source details and field mapping. The detector reviews events in a 60-second window.
 
+`public_honeypot_login_events.xlsx` contains the same 196 events in Excel format. Use its `login_events` worksheet for import; source details are in the `Source` worksheet.
+
 ## Browser dashboard
 
 Open `dashboard.html` in a browser. The page supports CSV import, event search and filtering, alert summaries, device event inspection, report export, demo replay, and demo-only account/IP block simulations. It runs locally in the browser and has no live-service connection.
