@@ -1292,7 +1292,12 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         RECT client{};
         GetClientRect(hwnd, &client);
         const int height = static_cast<int>(client.bottom);
-        const int visibleRows = std::max(1, (height - 220) / (g_activePage == 2 ? 48 : 34));
+        int visibleRows = 1;
+        if (g_activePage == 1) visibleRows = std::max(1, (height - 210) / 31);
+        else if (g_activePage == 2) visibleRows = std::max(1, (height - 190) / 48);
+        else if (g_activePage == 3) visibleRows = std::max(1, (height - 200) / 59);
+        else if (g_activePage == 5) visibleRows = std::max(1, (height - 230) / 43);
+        else if (g_activePage == 6) visibleRows = std::max(1, (height - 290) / 34);
         int itemCount = 0;
         if (g_activePage == 1) itemCount = static_cast<int>(g_events.size());
         else if (g_activePage == 2) itemCount = static_cast<int>(g_analysis.ipRows.size());
